@@ -1,25 +1,44 @@
 require("dotenv-flow").config();
 const express = require("express");
 const cors = require("cors");
-const { initSerial } = require("./serial");
+const { startCollectingMeasurements } = require("./serial");
 
 const PORT = process.env.API_PORT || 3001;
 
 const app = express();
-app.use(cors());
+
+// CORS settings: allow all origins
+app.use(cors({
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+}));
+
+app.options("*", cors());
 app.use(express.json());
 
-let latestWeights = [];
 
-initSerial((weights) => {
-    latestWeights = weights;
-    console.log("WEIGHTS:", weights);
-});
+startCollectingMeasurements()
 
-app.get("/weights", (req, res) => {
-    res.json({ values: latestWeights });
-});
 
 app.listen(PORT, () => {
-    console.log("API running at http://localhost:" + PORT);
+    console.log(`API running at http://localhost:${PORT}`);
+});
+//i wanted a route to get weights
+const db = require("./db");
+app.get("/weights", async (req, res) => {
+    try {
+        const weights = [];
+        for (let i = 1; i <= 36; i++) {
+            const row = await db.getLoadCell(i);
+            weights.push({
+                load_cell_id: i,
+                weight: row ? row.weight : null
+            });
+        }   
+        res.json(weights);
+    } catch (err) {
+        console.error("Error fetching weights:", err);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
 });

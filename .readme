@@ -1,0 +1,6 @@
+WINDOWS
+
+$env:NODE_ENV="development"
+npm start
+
+RASPBERRY PI
