@@ -6,36 +6,38 @@ const db = require("./db");
 
 const PORT_NAME = process.env.PORT_NAME;
 const BAUD_RATE = parseInt(process.env.BAUD_RATE || 115200);
-console.log(`🔵 Connecting to serial port ${PORT_NAME} at baud rate ${BAUD_RATE}...`);
-const serialPort = new SerialPort({ path: PORT_NAME, baudRate:BAUD_RATE }, (err) => {
-  if (err) {
-    console.error("❌ Error opening serial port:", err.message);
-    // process.exit(1);
+console.log(
+  `🔵 Connecting to serial port ${PORT_NAME} at baud rate ${BAUD_RATE}...`
+);
+const serialPort = new SerialPort(
+  { path: PORT_NAME, baudRate: BAUD_RATE },
+  (err) => {
+    if (err) {
+      console.error("❌ Error opening serial port:", err.message);
+      // process.exit(1);
+    }
   }
-});
+);
 
 const parser = serialPort.pipe(new ReadlineParser({ delimiter: "\n" }));
 
-
 async function applyCalibration(values) {
-    const output = [];
+  const output = [];
 
-    for (let i = 0; i < values.length; i++) {
-        const row = await db.getLoadCell(i + 1);
-        if (!row) {
-          console.log("no calibration data for load cell", i + 1);
-            output.push(0);
-            continue;
-        }
-
-        const weight = (values[i] - row.offset) * row.multiplier;
-        output.push(weight);
+  for (let i = 0; i < values.length; i++) {
+    const row = await db.getLoadCell(i + 1);
+    if (!row) {
+      console.log("no calibration data for load cell", i + 1);
+      output.push(0);
+      continue;
     }
 
-    return output;
+    const weight = (values[i] - row.offset) * row.multiplier;
+    output.push(weight);
+  }
+  console.log("Calibrated Weights:", output);
+  return output;
 }
-
-
 
 async function sendNReadSerialData(command) {
   console.log(command);
@@ -77,8 +79,8 @@ async function pingAmplitudes() {
     amplitudes = extractDataInArray(amplitudes);
     if (amplitudes.length > 0) {
       let calibratedAmp = await applyCalibration(amplitudes);
-      for(let i=0;i<calibratedAmp.length;i++){
-        await db.updateWeight(i+1, calibratedAmp[i]);
+      for (let i = 0; i < calibratedAmp.length; i++) {
+        await db.updateWeight(i + 1, calibratedAmp[i]);
       }
     } else {
       console.log("No valid amplitude data received.");
@@ -91,22 +93,14 @@ async function pingAmplitudes() {
 let running = false;
 async function loopMeasurements() {
   running = true;
-  while (running)
-  {try {
-      const amplitudes = await pingAmplitudes();
-      if (amplitudes.length > 0) {
-        console.log("✅ Amplitudes received:", amplitudes);
-        
-      } else {
-        console.log("No amplitude data to save.");
-      }
+  while (running) {
+    try {
+      await pingAmplitudes();
     } catch (err) {
       console.error("❌ Error reading amplitudes:", err);
     }
     await new Promise((resolve) => setTimeout(resolve, 5000)); // Small delay}
-    
-  
-}
+  }
 }
 
 function startCollectingMeasurements() {
