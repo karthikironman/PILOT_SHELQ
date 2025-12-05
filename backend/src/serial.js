@@ -5,7 +5,7 @@ const { SerialPort } = require("serialport");
 const db = require("./db");
 
 const PORT_NAME = process.env.PORT_NAME;
-const BAUD_RATE = parseInt(process.env.BAUD_RATE || 115200);
+const BAUD_RATE = parseInt(process.env.BAUD_RATE || 9600);
 console.log(
   `🔵 Connecting to serial port ${PORT_NAME} at baud rate ${BAUD_RATE}...`
 );
