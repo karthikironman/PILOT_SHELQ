@@ -12,7 +12,7 @@ import { Plus, Grid, List, Edit3, X, Loader, CornerDownRight, AlertTriangle, XCi
 // In a real project, these values would be loaded from environment variables (.env files).
 const CONFIG = {
   // Backend endpoint to fetch live load cell weight data
-  API_URL: "http://localhost:3001/weights", 
+  API_URL: "http://192.168.43.123:3001/weights", 
   // Key for storing product definitions in local storage
   LOCAL_STORAGE_KEY: "warehouseProducts",
   // How often to refresh data from the API (in milliseconds)
