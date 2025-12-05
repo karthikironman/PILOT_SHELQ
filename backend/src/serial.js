@@ -41,7 +41,7 @@ async function applyCalibration(values) {
 }
 
 async function sendNReadSerialData(command) {
-  // console.log(command);
+  console.log("sendNReadSerialData command = ",command);
   return new Promise((resolve, reject) => {
     let receivedData = "";
 
@@ -76,7 +76,7 @@ function extractDataInArray(response) {
 async function pingAmplitudes() {
   try {
     let amplitudes = await sendNReadSerialData("AMPLITUDES");
-    // console.log("Raw amplitudes response:", amplitudes);
+    console.log("Raw amplitudes response:", amplitudes);
     amplitudes = extractDataInArray(amplitudes);
     if (amplitudes.length > 0) {
       let calibratedAmp = await applyCalibration(amplitudes);
