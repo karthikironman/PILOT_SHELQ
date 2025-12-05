@@ -13,7 +13,7 @@ Description=Pilot Shelf Node.js App
 After=network.target
 
 [Service]
-ExecStart=/usr/bin/node /home/pi/PILOT_SHELQ/backend/server.js
+ExecStart=/usr/bin/node /home/pi/PILOT_SHELQ/backend/src/server.js
 WorkingDirectory=/home/pi/PILOT_SHELQ/backend
 Restart=always
 RestartSec=10
@@ -41,3 +41,9 @@ You should see "running".
 
 ## 6. If you change server.js later
 sudo systemctl restart pilotshelq
+
+
+
+
+## for crash logs
+sudo journalctl -u pilotshelq -n 50 --no-pager
