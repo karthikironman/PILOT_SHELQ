@@ -1,0 +1,90 @@
+:root{
+  --bg: #f7f9fb;
+  --card: #ffffff;
+  --muted: #6c757d;
+  --accent: #2b6cb0;
+  --radius: 10px;
+  --gap: 12px;
+  --max-width: 1080px;
+  --shadow: 0 6px 18px rgba(20,20,30,0.06);
+  --primary: #0d6efd;
+}
+
+/* App layout */
+*{box-sizing:border-box}
+body,html,#root{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial}
+.app-root{min-height:100vh;display:flex;flex-direction:column;background:var(--bg)}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;background:linear-gradient(90deg,#fff,#f8fbff);border-bottom:1px solid rgba(0,0,0,0.04)}
+.brand{font-weight:700;color:#0b3b66}
+.tabs{display:flex;gap:8px}
+.tab-btn{background:transparent;border:1px solid transparent;padding:8px 12px;border-radius:8px;cursor:pointer}
+.tab-btn.active{background:var(--primary);color:white;border-color:rgba(0,0,0,0.06)}
+.main-content{flex:1;padding:18px;display:flex;justify-content:center}
+.main-content > .page{width:100%;max-width:var(--max-width)}
+
+/* Footer */
+.footer{text-align:center;padding:12px 0;color:var(--muted);font-size:13px}
+
+/* Pages and header */
+.page{background:transparent}
+.dashboard-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:12px}
+.header-actions{display:flex;gap:10px;align-items:center}
+.small-btn{padding:6px 10px;border-radius:8px;border:1px solid rgba(0,0,0,0.06);background:white;cursor:pointer}
+.small-btn.active{background:#eef6ff;border-color:rgba(0,0,0,0.06)}
+
+/* Buttons */
+.btn{padding:8px 12px;border-radius:8px;border:1px solid rgba(0,0,0,0.06);background:white;cursor:pointer}
+.btn.ghost{background:transparent}
+.btn.primary{background:var(--primary);color:white;border:none}
+.card-btn{width:100%}
+
+/* Table */
+.table-wrap{overflow:auto;background:transparent;border-radius:8px;padding:6px}
+.product-table{width:100%;border-collapse:collapse;background:var(--card);box-shadow:var(--shadow);border-radius:8px;overflow:hidden}
+.product-table th, .product-table td{padding:12px 10px;text-align:left;border-bottom:1px solid rgba(0,0,0,0.04)}
+.product-table thead th{background:#fbfcff;font-weight:600;position:sticky;top:0;z-index:1}
+
+/* Cards grid */
+.cards-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.product-card{padding:14px;border-radius:12px;color:white;display:flex;flex-direction:column;justify-content:space-between;min-height:120px;box-shadow:var(--shadow)}
+.card-top{display:flex;justify-content:space-between;align-items:center}
+.card-title{margin:0;font-size:16px}
+.card-body{margin-top:10px;font-size:14px}
+.card-actions{margin-top:12px}
+
+/* Status pill */
+.status-pill{display:inline-block;padding:6px 10px;border-radius:999px;color:white;font-weight:600;font-size:13px}
+
+/* Modal */
+.modal-backdrop{position:fixed;inset:0;background:rgba(10,10,12,0.45);display:flex;align-items:center;justify-content:center;padding:20px;z-index:40}
+.modal{background:white;padding:16px;border-radius:12px;min-width:280px;max-width:600px;box-shadow:0 16px 50px rgba(0,0,0,0.3)}
+.modal h3{margin-top:0}
+.modal label{display:block;margin-top:8px;font-size:13px;color:var(--muted)}
+.modal input{width:100%;padding:8px;border-radius:8px;border:1px solid rgba(0,0,0,0.08);margin-top:6px}
+
+/* Forms */
+.row{display:flex;gap:12px}
+.row > div{flex:1}
+
+/* Page - Add Product */
+.add-page h2{margin-top:0}
+.actions{margin-top:14px}
+
+/* Empty */
+.empty{padding:18px;border-radius:8px;background:linear-gradient(180deg,#fff,#fbfbfb);text-align:center;color:var(--muted)}
+
+/* Small screens */
+@media (max-width: 900px){
+  .cards-grid{grid-template-columns:repeat(2,1fr)}
+}
+
+@media (max-width: 600px){
+  .topbar{padding:10px}
+  .brand{font-size:16px}
+  .dashboard-header{flex-direction:column;align-items:stretch}
+  .header-actions{justify-content:space-between}
+  .cards-grid{grid-template-columns:repeat(1,1fr)}
+  .product-table th, .product-table td{padding:10px 8px}
+  .modal{width:100%;max-width:460px}
+  .row{flex-direction:column}
+}
