@@ -464,7 +464,7 @@ const ProductListItem = ({ product, onEdit, onDelete }) => {
 const ProductGridItem = ({ product, onEdit, onDelete }) => {
   const { label, color, text } = STATUS_MAP[product.status];
   const Icon = STATUS_MAP[product.status].icon;
-  const bgColor = product.status === 2 ? 'bg-red-100' : (product.status === 1 ? 'bg-yellow-100' : (product.status === 0 ? 'bg-green-100' : 'bg-gray-100'));
+  const bgColor = product.status === 2 ? 'bg-red-100' : (product.status === 1 ? 'bg-yellow-100' : (product.status === 0 ? 'bg-green-100' : 'bg-gray-300'));
   const ringColor = product.status === 2 ? 'ring-red-300' : (product.status === 1 ? 'ring-yellow-300' : (product.status === 0 ? 'ring-green-300' : 'ring-gray-300'));
 
   const countColor = product.status === 2 ? 'text-red-600 font-extrabold' : (product.status === 1 ? 'text-yellow-600 font-bold' : 'text-gray-800 font-bold');
