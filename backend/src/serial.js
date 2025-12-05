@@ -32,15 +32,16 @@ async function applyCalibration(values) {
       continue;
     }
 
-    const weight = (values[i] - row.offset) * row.multiplier;
+    const weight = (values[i] - row.offset) / row.multiplier;
+    // console.log(`LoadCell ${i + 1}: Raw=${values[i]}, Offset=${row.offset}, Multiplier=${row.multiplier}, Calibrated=${weight}`);
     output.push(weight);
   }
-  console.log("Calibrated Weights:", output);
+  // console.log("Calibrated Weights:", output);
   return output;
 }
 
 async function sendNReadSerialData(command) {
-  console.log(command);
+  // console.log(command);
   return new Promise((resolve, reject) => {
     let receivedData = "";
 
@@ -75,11 +76,12 @@ function extractDataInArray(response) {
 async function pingAmplitudes() {
   try {
     let amplitudes = await sendNReadSerialData("AMPLITUDES");
-    console.log("Raw amplitudes response:", amplitudes);
+    // console.log("Raw amplitudes response:", amplitudes);
     amplitudes = extractDataInArray(amplitudes);
     if (amplitudes.length > 0) {
       let calibratedAmp = await applyCalibration(amplitudes);
       for (let i = 0; i < calibratedAmp.length; i++) {
+        // console.log(`Updating LoadCell ${i + 1} with weight ${calibratedAmp[i]}`);
         await db.updateWeight(i + 1, calibratedAmp[i]);
       }
     } else {
@@ -105,7 +107,7 @@ async function loopMeasurements() {
 
 function startCollectingMeasurements() {
   if (!running) {
-    console.log("Sensor Processing Started");
+    // console.log("Sensor Processing Started");
     loopMeasurements().catch((err) => {
       console.error("Error in measurement loop:", err);
       running = false;
