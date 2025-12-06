@@ -6,7 +6,7 @@ const { SerialPort } = require("serialport");
 const { ReadlineParser } = require("@serialport/parser-readline");
 
 // --------- CONFIG -----------
-const PORT = process.env.PORT_NAME || "COM5";     // Change for Raspberry Pi e.g. "/dev/ttyUSB0"
+const PORT = process.env.PORT_NAME || "/dev/ttyUSB0";     // Change for Raspberry Pi e.g. "/dev/ttyUSB0"
 const BAUD = parseInt(process.env.BAUD_RATE || 9600);
 const TIMEOUT_MS = 10000;
 
