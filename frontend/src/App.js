@@ -11,13 +11,13 @@ import { Plus, Grid, List, Edit3, X, Loader, CornerDownRight, AlertTriangle, XCi
 // --- CONFIGURATION ---
 const CONFIG = {
   // Backend endpoint to fetch live load cell weight data
-  API_URL: "http://localhost:3001/weights", 
+  API_URL: "http://192.168.43.123:3001/weights", 
   // Key for storing product definitions in local storage
   LOCAL_STORAGE_KEY: "warehouseProducts",
   // How often to refresh data from the API (in milliseconds)
   REFRESH_INTERVAL_MS: 5000, 
   // Calibration URL and SIMULATED duration (kept for progress bar duration)
-  CALIBRATION_URL: "http://localhost:3001/calibrate", // <--- THE ACTUAL ENDPOINT
+  CALIBRATION_URL: "http://192.168.43.123:3001/calibrate", // <--- THE ACTUAL ENDPOINT
   CALIBRATION_DURATION_MS: 3000, // <--- Used for the animation duration
   // 🔥 NEW: Placeholder for default image if none provided
   DEFAULT_PRODUCT_IMAGE: "https://via.placeholder.com/150x100?text=No+Image"
