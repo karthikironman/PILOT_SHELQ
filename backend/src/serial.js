@@ -6,6 +6,9 @@ const db = require("./db");
 
 const PORT_NAME = process.env.PORT_NAME;
 const BAUD_RATE = parseInt(process.env.BAUD_RATE || 9600);
+const TIMEOUT_MS = parseInt(process.env.TIMEOUT_MS || 10000);
+const PING = parseInt(process.env.PING || 10000);
+
 console.log(
   `🔵 Connecting to serial port ${PORT_NAME} at baud rate ${BAUD_RATE}...`
 );
@@ -62,7 +65,7 @@ async function sendNReadSerialData(command) {
     setTimeout(() => {
       parser.off("data", onData);
       reject("Timeout: No response from Arduino");
-    }, 3000);
+    }, TIMEOUT_MS);
   });
 }
 
@@ -101,7 +104,7 @@ async function loopMeasurements() {
     } catch (err) {
       console.error("❌ Error reading amplitudes:", err);
     }
-    await new Promise((resolve) => setTimeout(resolve, 5000)); // Small delay}
+    await new Promise((resolve) => setTimeout(resolve, PING)); // Small delay}
   }
 }
 
