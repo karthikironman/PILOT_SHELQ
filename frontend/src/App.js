@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Plus, Grid, List, Edit3, X, Loader, CornerDownRight, AlertTriangle, XCircle, CheckCircle, Trash2 } from 'lucide-react';
+import { Plus, Grid, List, Edit3, X, Loader, CornerDownRight, AlertTriangle, XCircle, CheckCircle, Trash2, Zap } from 'lucide-react';
 
 // NOTE ON INSTALLATION:
 // This component relies on the 'lucide-react' icon library.
@@ -9,14 +9,18 @@ import { Plus, Grid, List, Edit3, X, Loader, CornerDownRight, AlertTriangle, XCi
 // yarn add lucide-react
 
 // --- CONFIGURATION ---
-// In a real project, these values would be loaded from environment variables (.env files).
 const CONFIG = {
   // Backend endpoint to fetch live load cell weight data
-  API_URL: "http://192.168.43.123:3001/weights", 
+  API_URL: "http://localhost:3001/weights", 
   // Key for storing product definitions in local storage
   LOCAL_STORAGE_KEY: "warehouseProducts",
   // How often to refresh data from the API (in milliseconds)
   REFRESH_INTERVAL_MS: 5000, 
+  // Calibration URL and SIMULATED duration (kept for progress bar duration)
+  CALIBRATION_URL: "http://localhost:3001/calibrate", // <--- THE ACTUAL ENDPOINT
+  CALIBRATION_DURATION_MS: 3000, // <--- Used for the animation duration
+  // 🔥 NEW: Placeholder for default image if none provided
+  DEFAULT_PRODUCT_IMAGE: "https://via.placeholder.com/150x100?text=No+Image"
 };
 
 const INITIAL_PRODUCTS = [
@@ -31,6 +35,8 @@ const INITIAL_PRODUCTS = [
     live_weight: 0,
     count: 0,
     status: 3,
+    // 🔥 ADD IMAGE FIELD
+    product_image_url: 'https://images.unsplash.com/photo-1546279930-9b8b7e2c90a2?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8c29kYSUyMGNhbnxlbnwwfHwwfHx8MA%3D%3D',
   },
   {
     id: 2,
@@ -43,6 +49,8 @@ const INITIAL_PRODUCTS = [
     live_weight: 0,
     count: 0,
     status: 3,
+    // 🔥 ADD IMAGE FIELD
+    product_image_url: 'https://images.unsplash.com/photo-1511920170033-f8396924c348?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Nnx8Y29mZmVlJTIwYmVhbnN8ZW58MHx8MHx8fDA%3D',
   },
   {
     id: 3,
@@ -55,6 +63,8 @@ const INITIAL_PRODUCTS = [
     live_weight: 0,
     count: 0,
     status: 3,
+    // 🔥 ADD IMAGE FIELD (Empty URL to test placeholder)
+    product_image_url: '', 
   },
 ];
 
@@ -116,6 +126,10 @@ const useProductLogic = () => {
   const [loadCellData, setLoadCellData] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  
+  // 0: Idle, 1: In Progress, 2: Success, 3: Failure
+  const [isCalibrating, setIsCalibrating] = useState(false);
+  const [calibrationStatus, setCalibrationStatus] = useState(0); 
 
   // Effect to save products whenever the state changes
   useEffect(() => {
@@ -179,6 +193,68 @@ const useProductLogic = () => {
     });
   }, [products, loadCellData]);
 
+  // CALIBRATION FUNCTION - MODIFIED
+  const startCalibration = useCallback(async () => {
+    if (isCalibrating) return;
+
+    setIsCalibrating(true);
+    setCalibrationStatus(1); // Set to In Progress
+    setError(null);
+    
+    // Timer to run the progress bar animation for the configured duration
+    // even if the network call is faster/slower. 
+    // This is optional but provides a better UX for a seemingly short process.
+    const animationPromise = new Promise(resolve => 
+      setTimeout(resolve, CONFIG.CALIBRATION_DURATION_MS)
+    );
+    
+    let fetchSuccess = false;
+
+    try {
+      const response = await fetch(CONFIG.CALIBRATION_URL, {
+        method: 'POST', // Assuming calibration is a POST request
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        // You might need to send specific data, but for a simple zero calibration, 
+        // an empty body or specific command might suffice.
+        // body: JSON.stringify({ command: 'zero_calibrate' }), 
+      });
+
+      if (!response.ok) {
+        // Attempt to read error message from the response body if available
+        let errorMessage = `HTTP error! Status: ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+        } catch {}
+        throw new Error(errorMessage);
+      }
+      
+      // Wait for the animation to finish before showing the success/failure state
+      await animationPromise;
+      fetchSuccess = true;
+      setCalibrationStatus(2); // Success
+
+    } catch (err) {
+      // Wait for the animation to finish before showing the failure state
+      await animationPromise;
+      console.error("Calibration Error:", err);
+      setError(`Calibration failed: ${err.message}`);
+      setCalibrationStatus(3); // Failure
+
+    } finally {
+      // Ensure we stop the "in progress" state
+      setIsCalibrating(false);
+      
+      // Revert status back to idle after a short delay so the user can see the result icon
+      // Only set a timeout if the fetch was a success or failure
+      if (fetchSuccess || calibrationStatus === 3) {
+        setTimeout(() => setCalibrationStatus(0), 2000); 
+      }
+    }
+  }, [isCalibrating, calibrationStatus]); // Include calibrationStatus in dependency array for cleanup logic
+  
   // Effect for continuous data fetching
   useEffect(() => {
     let active = true;
@@ -187,26 +263,24 @@ const useProductLogic = () => {
       setIsLoading(true);
       setError(null);
       try {
-        // Implementing exponential backoff logic for robust fetching
         const maxRetries = 3;
         let delay = 1000;
 
         for (let i = 0; i < maxRetries; i++) {
           try {
-            const response = await fetch(CONFIG.API_URL); // <-- USING CONFIG.API_URL
+            const response = await fetch(CONFIG.API_URL); 
             if (!response.ok) {
               throw new Error(`HTTP error! status: ${response.status}`);
             }
             const data = await response.json();
             if (active) {
               setLoadCellData(data);
-              setError(null); // Clear error on successful fetch
+              setError(null); 
               setIsLoading(false);
             }
-            return; // Success, exit loop
+            return; 
           } catch (err) {
             if (i === maxRetries - 1) {
-              // Last retry failed
               if (active) {
                 console.error("Final attempt failed to fetch live data:", err);
                 setError("Failed to connect to backend service after multiple retries.");
@@ -214,9 +288,8 @@ const useProductLogic = () => {
               }
               return;
             }
-            // Wait before retrying
             await new Promise(resolve => setTimeout(resolve, delay));
-            delay *= 2; // Exponential backoff
+            delay *= 2; 
           }
         }
       } catch (err) {
@@ -225,13 +298,10 @@ const useProductLogic = () => {
           setError("Failed to connect to backend service.");
           setIsLoading(false);
         }
-      } finally {
-        // Note: setIsLoading(false) is handled inside the try/catch loop now
-      }
+      } 
     };
 
     fetchData(); // Initial fetch
-    // Use the configured interval
     const interval = setInterval(fetchData, CONFIG.REFRESH_INTERVAL_MS); 
 
     return () => {
@@ -248,6 +318,9 @@ const useProductLogic = () => {
     addProductDefinition,
     deleteProductDefinition, 
     products, 
+    startCalibration,
+    isCalibrating,
+    calibrationStatus,
   };
 };
 
@@ -258,10 +331,61 @@ const StatusLED = ({ status }) => {
   return <div className={`h-4 w-4 rounded-full ${color} shadow-lg`} title={STATUS_MAP[status].label}></div>;
 };
 
-const DashboardHeader = ({ onViewToggle, currentView, onAddProduct }) => (
+// This component is updated to use the 'animate-calibrate-progress' class 
+// which is tied to the CONFIG.CALIBRATION_DURATION_MS in the main App component.
+const CalibrationButton = ({ onClick, isCalibrating, calibrationStatus }) => {
+    let buttonText = 'Calibrate Load Cells';
+    let icon = Zap;
+    let className = 'bg-yellow-500 hover:bg-yellow-600';
+
+    if (isCalibrating) {
+        buttonText = 'Calibrating...';
+        icon = Loader;
+        className = 'bg-yellow-600 cursor-not-allowed';
+    } else if (calibrationStatus === 2) {
+        buttonText = 'Calibration Success!';
+        icon = CheckCircle;
+        className = 'bg-green-500 hover:bg-green-600';
+    } else if (calibrationStatus === 3) {
+        buttonText = 'Calibration Failed!';
+        icon = XCircle;
+        className = 'bg-red-500 hover:bg-red-600';
+    }
+
+    const IconComponent = icon;
+    const showProgress = isCalibrating;
+
+    return (
+        <button
+            onClick={onClick}
+            disabled={isCalibrating}
+            className={`relative overflow-hidden flex items-center justify-center space-x-2 px-4 py-2 text-white font-semibold rounded-lg shadow-md transition-all duration-300 ${className}`}
+            title="Start Zero Calibration"
+        >
+            {/* Progress Bar Animation (only visible during calibration) */}
+            {showProgress && (
+                // The animation class is now applied here
+                <div className="absolute inset-0 bg-white opacity-20 transform scale-x-0 origin-left animate-calibrate-progress rounded-lg"></div>
+            )}
+
+            {/* Icon and Text */}
+            <IconComponent size={20} className={isCalibrating ? "animate-spin" : ""} />
+            <span className="relative z-10 hidden sm:inline">{buttonText}</span>
+            <span className="relative z-10 sm:hidden">{buttonText.split(' ')[0]}</span>
+        </button>
+    );
+};
+
+const DashboardHeader = ({ onViewToggle, currentView, onAddProduct, onCalibrate, isCalibrating, calibrationStatus }) => (
   <header className="flex flex-col sm:flex-row justify-between items-center p-4 bg-white shadow-md rounded-xl mb-6">
     <h1 className="text-3xl font-extrabold text-gray-800 mb-4 sm:mb-0">Inventory Dashboard</h1>
     <div className="flex space-x-3">
+      <CalibrationButton
+          onClick={onCalibrate}
+          isCalibrating={isCalibrating}
+          calibrationStatus={calibrationStatus}
+      />
+      
       <button
         onClick={onAddProduct}
         className="flex items-center space-x-2 px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 transition duration-150"
@@ -321,6 +445,8 @@ const ProductFormModal = ({ product, onClose, onSave }) => {
     to: 1,
     warning: 10,
     alarm: 5,
+    // 🔥 INITIALIZE NEW FIELD
+    product_image_url: '', 
   };
 
   const [formData, setFormData] = useState(initialData);
@@ -331,11 +457,9 @@ const ProductFormModal = ({ product, onClose, onSave }) => {
     let finalValue = value;
 
     if (type === 'number') {
-      // Allow empty string for temporary user input
       if (value === "") {
         finalValue = value;
       } else {
-        // Ensure non-negative numbers for number inputs
         finalValue = parseFloat(value) >= 0 ? parseFloat(value) : 0;
       }
     }
@@ -375,6 +499,9 @@ const ProductFormModal = ({ product, onClose, onSave }) => {
           <Input label="Product Name" name="name" value={formData.name} onChange={handleChange} required type="text" />
           <Input label="Unit Weight (grams)" name="unit_weight" value={formData.unit_weight} onChange={handleChange} required type="number" min="1" />
           
+          {/* 🔥 NEW IMAGE URL INPUT */}
+          <Input label="Product Image URL (Optional)" name="product_image_url" value={formData.product_image_url} onChange={handleChange} required={false} type="url" />
+
           <div className="flex space-x-4">
             <Input label="Load Cell From ID" name="from" value={formData.from} onChange={handleChange} required type="number" min="1" max="32" />
             <Input label="Load Cell To ID" name="to" value={formData.to} onChange={handleChange} required type="number" min="1" max="32" />
@@ -469,9 +596,23 @@ const ProductGridItem = ({ product, onEdit, onDelete }) => {
 
   const countColor = product.status === 2 ? 'text-red-600 font-extrabold' : (product.status === 1 ? 'text-yellow-600 font-bold' : 'text-gray-800 font-bold');
 
+  // 🔥 Determine which image to use
+  const imageUrl = product.product_image_url || CONFIG.DEFAULT_PRODUCT_IMAGE;
 
   return (
     <div className={`p-6 rounded-xl shadow-lg border-2 ${bgColor} ${ringColor} ring-2 transition-all duration-300 transform hover:scale-[1.02]`}>
+      
+      {/* 🔥 IMAGE DISPLAY BLOCK */}
+      <div className="w-full h-24 mb-4 rounded-lg overflow-hidden border border-gray-200">
+        <img
+          src={imageUrl}
+          alt={product.name}
+          className="w-full h-full object-contain"
+          // Fallback to the default image if the provided URL fails to load
+          onError={(e) => { e.target.onerror = null; e.target.src = CONFIG.DEFAULT_PRODUCT_IMAGE; }}
+        />
+      </div>
+
       <div className="flex justify-between items-start mb-4">
         <h3 className="text-xl font-extrabold text-gray-900 truncate">{product.name}</h3>
         <div className="flex space-x-1">
@@ -530,12 +671,21 @@ const ProductGridItem = ({ product, onEdit, onDelete }) => {
 // --- MAIN APPLICATION COMPONENT ---
 
 const App = () => {
-  const { calculatedProducts, isLoading, error, updateProductDefinition, addProductDefinition, deleteProductDefinition, products: originalProducts } = useProductLogic();
-  const [view, setView] = useState('grid'); // 'grid' or 'list'
+  const { 
+    calculatedProducts, 
+    isLoading, 
+    error, 
+    updateProductDefinition, 
+    addProductDefinition, 
+    deleteProductDefinition, 
+    startCalibration,
+    isCalibrating,
+    calibrationStatus,
+  } = useProductLogic();
+  const [view, setView] = useState('list'); // 'grid' or 'list'
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [productToEdit, setProductToEdit] = useState(null);
   
-  // State for deletion confirmation
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState(null);
 
@@ -557,7 +707,6 @@ const App = () => {
     setProductToEdit(null);
   };
   
-  // --- Deletion Handlers ---
   const handleDeleteClick = (product) => {
     setProductToDelete(product);
     setIsDeleteModalOpen(true);
@@ -575,14 +724,29 @@ const App = () => {
     setIsDeleteModalOpen(false);
     setProductToDelete(null);
   };
-  // -------------------------
+
+  // Inject Tailwind CSS keyframes for the calibration animation
+  // NOTE: This style block is necessary for the progress bar animation to work
+  const keyframesStyle = `
+    @keyframes calibrate-progress {
+      from { transform: scaleX(0); }
+      to { transform: scaleX(1); }
+    }
+    .animate-calibrate-progress {
+      animation: calibrate-progress ${CONFIG.CALIBRATION_DURATION_MS}ms linear forwards;
+    }
+  `;
 
   return (
     <div className="min-h-screen bg-gray-100 p-4 sm:p-8 font-sans">
+      <style>{keyframesStyle}</style> {/* Inject animation keyframes */}
       <DashboardHeader
         onViewToggle={() => setView(view === 'grid' ? 'list' : 'grid')}
         currentView={view}
         onAddProduct={() => handleEditClick(null)}
+        onCalibrate={startCalibration}
+        isCalibrating={isCalibrating}
+        calibrationStatus={calibrationStatus}
       />
 
       {(isLoading && calculatedProducts.length === 0) && (

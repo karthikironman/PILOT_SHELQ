@@ -1,7 +1,7 @@
 require("dotenv-flow").config();
 const express = require("express");
 const cors = require("cors");
-const { startCollectingMeasurements } = require("./serial");
+const { startCollectingMeasurements, stopCollectingMeasurements, pingAmplitudes } = require("./serial");
 
 const PORT = process.env.API_PORT || 3001;
 
@@ -34,7 +34,8 @@ app.get("/weights", async (req, res) => {
             // console.log(`LoadCell ${i}: Weight=${row ? row.weight : null}`);
             weights.push({
                 load_cell_id: i,
-                weight: row ? row.weight : null
+                weight: row ? row.weight : null,
+                offset: row ? row.offset : null,
             });
         }   
         // console.log("Weights fetched:", weights);
@@ -43,4 +44,16 @@ app.get("/weights", async (req, res) => {
         console.error("Error fetching weights:", err);
         res.status(500).json({ error: "Internal Server Error" });
     }
+});
+
+app.post("/calibrate", async (req, res) => {
+    try {
+        stopCollectingMeasurements();
+        await pingAmplitudes(true);
+        startCollectingMeasurements();
+        res.json({ message: "Calibration triggered" });
+    } catch (err) {
+        console.error("Error during calibration:", err);
+        res.status(500).json({ error: "Internal Server Error" });
+    }       
 });

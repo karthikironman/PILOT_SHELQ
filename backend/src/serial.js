@@ -44,7 +44,7 @@ async function applyCalibration(values) {
 }
 
 async function sendNReadSerialData(command) {
-  console.log("sendNReadSerialData command = ",command);
+  console.log("sendNReadSerialData command = ", command);
   return new Promise((resolve, reject) => {
     let receivedData = "";
 
@@ -76,16 +76,20 @@ function extractDataInArray(response) {
   }
   return [];
 }
-async function pingAmplitudes() {
+async function pingAmplitudes(offset = false) {
   try {
     let amplitudes = await sendNReadSerialData("AMPLITUDES");
     console.log("Raw amplitudes response:", amplitudes);
     amplitudes = extractDataInArray(amplitudes);
     if (amplitudes.length > 0) {
-      let calibratedAmp = await applyCalibration(amplitudes);
-      for (let i = 0; i < calibratedAmp.length; i++) {
-        // console.log(`Updating LoadCell ${i + 1} with weight ${calibratedAmp[i]}`);
-        await db.updateWeight(i + 1, calibratedAmp[i]);
+      if (offset === false) {
+        let calibratedAmp = await applyCalibration(amplitudes);
+        for (let i = 0; i < calibratedAmp.length; i++) {
+          // console.log(`Updating LoadCell ${i + 1} with weight ${calibratedAmp[i]}`);
+          await db.updateWeight(i + 1, calibratedAmp[i]);
+        }
+      } else {
+        return await updateAllOffsets(amplitudes, db);
       }
     } else {
       console.log("No valid amplitude data received.");
@@ -95,12 +99,38 @@ async function pingAmplitudes() {
   }
 }
 
+// Function signature assumed to be async
+async function updateAllOffsets(amplitudes, db) {
+  // 1. Create an array of Promises for all update operations.
+  // We map each amplitude to an update call, which returns a Promise.
+  const updatePromises = amplitudes.map((offset, index) => {
+    const id = index + 1; // LoadCell IDs are 1-based
+    
+    // Log before starting the operation (optional)
+    console.log(`Starting update for LoadCell ${id} with offset ${offset}`); 
+    
+    // Return the Promise object
+    return db.updateOffset(id, offset);
+  });
+
+  // 2. Wait for ALL promises to complete.
+  // This executes all database calls concurrently.
+  try {
+    await Promise.all(updatePromises);
+    console.log(`Successfully updated all ${amplitudes.length} LoadCells.`);
+  } catch (error) {
+    console.error("One or more load cell updates failed:", error);
+    // You can handle partial successes or rethrow the error here
+    throw error;
+  }
+}
+
 let running = false;
-async function loopMeasurements() {
+async function loopMeasurements(offset = false) {
   running = true;
   while (running) {
     try {
-      await pingAmplitudes();
+      await pingAmplitudes((offset = false));
     } catch (err) {
       console.error("❌ Error reading amplitudes:", err);
     }
@@ -108,10 +138,10 @@ async function loopMeasurements() {
   }
 }
 
-function startCollectingMeasurements() {
+function startCollectingMeasurements(offset = false) {
   if (!running) {
     // console.log("Sensor Processing Started");
-    loopMeasurements().catch((err) => {
+    loopMeasurements(offset).catch((err) => {
       console.error("Error in measurement loop:", err);
       running = false;
     });
@@ -133,4 +163,5 @@ process.on("SIGINT", async () => {
 module.exports = {
   startCollectingMeasurements,
   stopCollectingMeasurements,
+  pingAmplitudes
 };
